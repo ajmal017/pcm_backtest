@@ -269,6 +269,8 @@ class DataBook:
 		"""
 		# getting the precise lookback data is expensive
 		# we do it greedy, to pull for sure enough amount of data
+		if self.warmup == 0: return
+
 		start = self.start - pd.DateOffset(days=self.warmup/self.freq.one_day*2)
 		end = self.start - pd.DateOffset(seconds=1)
 		bar_size = DEFAULT_FREQ.bar_size

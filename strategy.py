@@ -240,7 +240,7 @@ class BaseStrategy(BaseConsumer):
 		ticks (Market Event)
 		"""
 		if body['freq'] != self.freq: return
-
+		
 		ticks = body['ticks']
 		self._update_data(ticks)
 
