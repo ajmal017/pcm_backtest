@@ -35,8 +35,8 @@ class BaseStrategy(BaseConsumer):
 	since it obtains the 'Tick' object from MarketEvent message
 	"""
 	def __init__(
-		self, symbol_list, allocation, freq, positions, warmup=0,
-		start=None, end=None, fixed_allocation=True,
+		self, symbol_list, allocation, freq, positions,
+		start, end, warmup=0, fixed_allocation=True,
 		batch_size=10000
 	):
 		"""
@@ -66,14 +66,10 @@ class BaseStrategy(BaseConsumer):
 		self.warmup = warmup * n
 
 		if start:
-			self.start_dt = pd.Timestamp(
-				clean_timestamp(pd.Timestamp(start, tz=LOCAL_TZ)).date()
-			)
+			self.start_dt = clean_timestamp(start)
 
 		if end:
-			self.end_dt = pd.Timestamp(
-				clean_timestamp(pd.Timestamp(end, tz=LOCAL_TZ)).date()
-			) + pd.DateOffset(seconds=-1, days=1)
+			self.end_dt = clean_timestamp(end) + pd.DateOffset(seconds=-1, days=1)
 
 
 		# allocation parameters for tracking portfolio
@@ -112,6 +108,17 @@ class BaseStrategy(BaseConsumer):
 			"Should implement calculate_signals()\n" + \
 			"By calling this method to calculate 'Signal' Events"
 		)
+
+	def subscriptions(self):
+		return [
+			('ack-reg-feed', self.id, self.on_ack_reg_feed),
+			('ack-dereg_feed', self.id, self.on_ack_dereg_feed),
+			('ack-reg-exe', self.id, self.on_ack_reg_exe),
+			('ack-dereg-exe', self.id, self.on_ack_dereg_exe),
+			('eod', self.id, self.on_eod),
+			('tick', self.id, self.on_market),
+			('fill', self.id, self.on_fill),
+		]
 		
 	def update_data(self, ticks):
 		pass
@@ -140,21 +147,6 @@ class BaseStrategy(BaseConsumer):
 		return sum(pos.mv for pos in self.pos.values()) + self.cash
 
 	@property
-	@lru_cache(maxsize=32)
-	def warmup_key(self):
-		return 'warmup.{}'.format(self.name)
-
-	@property
-	@lru_cache(maxsize=32)
-	def next_key(self):
-		return 'next.{}'.format(self.name)
-
-	@property
-	@lru_cache(maxsize=32)
-	def order_key(self):
-		return 'order.{}'.format(self.name)
-
-	@property
 	def bp(self):
 		if self.fixed_allocation:
 			return self.allocation
@@ -181,48 +173,6 @@ class BaseStrategy(BaseConsumer):
 		self.basic_publish('next', sender=self.id)
 
 
-	def subscriptions(self):
-		return [
-			('ack-reg-feed', self.id, self.on_ack_reg_feed),
-			('ack-dereg_feed', self.id, self.on_ack_dereg_feed),
-			('ack-reg-exe', self.id, self.on_ack_reg_exe),
-			('ack-dereg-exe', self.id, self.on_ack_dereg_exe),
-			('eod', self.id, self.on_eod),
-			('tick', self.id, self.on_market),
-			('fill', self.id, self.on_fill),
-		]
-
-
-	def on_msg(self, body, message):
-		body = decompress_data(body)
-		key = message.delivery_info['routing_key'].split('.')
-		event = key[0]
-		
-		if event == 'tick':
-			ticks = event_from_dict(body)
-			self.on_market(ticks)
-
-		elif event == 'fill':
-			self.on_fill(event_from_dict(body))
-
-		elif event == 'eod':
-			self.on_eod()
-
-		elif event == 'ack-reg-feed':
-			self.on_ack_reg_feed()
-
-		elif event == 'ack-dereg-feed':
-			self.on_ack_dereg_feed()
-
-		elif event == 'ack-reg-exe':
-			self.on_ack_reg_exe()
-
-		elif event == 'ack-dereg-exe':
-			self.on_ack_dereg_exe()
-
-		# message.ack()
-
-
 	def on_ack_reg_feed(self, oid, body):
 		self.required['feed'] = True
 
@@ -239,8 +189,8 @@ class BaseStrategy(BaseConsumer):
 	def on_eod(self, oid, body):
 		"""Handlering End of Data Event"""
 		self._pbar.update(self._pbar.total - self._pbar.n)
-		if self._hist:
-			self._process_position_entries()
+		# if self._hist:
+			# self._process_position_entries()
 		self._pbar.close()
 
 		self.basic_publish('dereg-feed', sender=self.id)
@@ -289,6 +239,8 @@ class BaseStrategy(BaseConsumer):
 		----------
 		ticks (Market Event)
 		"""
+		if body['freq'] != self.freq: return
+
 		ticks = body['ticks']
 		self._update_data(ticks)
 
@@ -308,8 +260,8 @@ class BaseStrategy(BaseConsumer):
 			# save old strategy performance history
 			self._pbar.update(1)
 		
-		if ticks.timestamp >= self.start_dt:
-			self.basic_publish('next', sender=self.id)
+		# if ticks.timestamp >= self.start_dt:
+			# self.basic_publish('next', sender=self.id)
 
 		if self.t >= self.warmup:
 			self._save_positions()

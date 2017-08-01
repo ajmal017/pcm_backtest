@@ -12,7 +12,8 @@ from . import conf as CONF
 from .conf import DEFAULT_FREQ
 from .base import BaseConsumer
 from .event import MarketEvent, Tick
-# from .pipe import TickerPipeline
+from pcm_pipe.backtest import TickerPipeline
+from pcm_pipe.conn import BacktestDB
 
 logger = logging.getLogger('Feeder')
 
@@ -40,7 +41,6 @@ class Feeder(BaseConsumer):
 		
 
 	def on_reg(self, oid, body):
-		print(oid, body)
 		if body['group'] == 'stgy':
 			if oid not in self.books:
 				self.books[oid] = DataBook(self, oid)
@@ -103,14 +103,13 @@ class DataBook:
 		The actual avaliable: start (Timestamp), end (Timestamp)
 		"""
 		# for each symbol we want avalaible historical date range
-		for pipe in self.pipes:
-			s_start, s_end = pipe.avaliable_period(
-				resolution=DEFAULT_FREQ.bar_size
-			)
+		with BacktestDB.session_scope() as sess:
+			for pipe in self.pipes:
+				s_start, s_end = pipe.avaliable_period(sess=sess)
 
-			# get the period that all symbols have data avaliable
-			start = max(s_start, start)
-			end = min(s_end, end)
+				# get the period that all symbols have data avaliable
+				start = max(s_start, start)
+				end = min(s_end, end)
 
 		return start, end
 
@@ -141,34 +140,28 @@ class DataBook:
 		"""Create mongo query to read in data stream for each symbols
 		- It uses `Contract` ORM's function to read in bars with agg features
 		"""
-		stream = {}
-		for t in self.symbol_list:
-			pipe = TickerPipeline(t.perm_tick)
-			stream[pipe.ticker.perm_tick] = (
-				pipe.get_agg_bars(
-					start=self.start, end=self.end,
-					resolution=DEFAULT_FREQ.bar_size,
-					agg_bar_size=DEFAULT_FREQ.bar_size
-				)
-			)
-		self.stream = stream
+		with BacktestDB.session_scope() as sess:
+			stream = {}
+			for pipe in self.pipes:
+				data = pipe.get_data(sess=sess, start=self.start, end=self.end)
+				stream[pipe.ticker_id] = data.iterrows()
+			self.stream = stream
 
 
 	def get_new_market(self):
 		data = {}
-		for pipe in self.pipes:
-			symbol = pipe.ticker.perm_tick
-			bar = self.stream[symbol].next()
+		for symbol in self.symbol_list:
+			ts, bar = next(self.stream[symbol])
 
 			tick = Tick(
-				timestamp=pd.Timestamp(bar['timestamp']),
-				open=round(bar['open'], 3),
-				close=round(bar['close'], 3),
-				high=round(bar['high'], 3),
-				low=round(bar['low'], 3),
-				volume=bar['volume'],
-				# trades=bar['trades'],
-				# wap=round(bar['wap'], 3),
+				timestamp=ts,
+				open=float(bar['open']),
+				close=float(bar['close']),
+				high=float(bar['high']),
+				low=float(bar['low']),
+				volume=int(bar['volume']),
+				# trades=int(bar['trades']),
+				# wap=float(bar['wap']),
 			)
 
 			data[symbol] = tick
@@ -206,29 +199,30 @@ class DataBook:
 
 			- When the data feed ends, make sure publish EOD Event
 		"""
-		end = False
+		while True:
+			end = False
 
-		while not end:
-			try:
-				# fire market event for the executor first
-				# filling the old orders first
-				market = self.get_new_market()
-				self.app.basic_publish(
-					'tick', sender=self.stgy_oid,
-					ticks=market, freq=DEFAULT_FREQ
-				)
+			while not end:
+				try:
+					# fire market event for the executor first
+					# filling the old orders first
+					market = self.get_new_market()
+					self.app.basic_publish(
+						'tick', sender=self.stgy_oid,
+						ticks=market, freq=DEFAULT_FREQ
+					)
 
-			except StopIteration:
-				# no more data, send out End-Of-Data Event
-				self.app.basic_publish('eod', sender=self.stgy_oid)
-				return
+				except StopIteration:
+					# no more data, send out End-Of-Data Event
+					self.app.basic_publish('eod', sender=self.stgy_oid)
+					return
 
-			# check to see if we need to send out event for strategy
-			# if num_agg is 1, then feed to executor will always go to stgy too
-			if self.num_agg != 1:
-				end = self.stgy_market(market, state='real')
-			else:
-				end = True
+				# check to see if we need to send out event for strategy
+				# if num_agg is 1, then feed to executor will always go to stgy too
+				if self.num_agg != 1:
+					end = self.stgy_market(market, state='real')
+				else:
+					end = True
 
 
 	def stgy_market(self, market, state='warmup'):
@@ -280,18 +274,18 @@ class DataBook:
 		bar_size = DEFAULT_FREQ.bar_size
 
 		try:
-			data = []
-			for pipe in self.pipes:
-				qu = pipe.get_agg_bars(start, end, agg_bar_size=bar_size)
-				# then here we adjust for enough bars to warmup
-				chunk = pd.DataFrame(list(qu))
-				chunk['symbol'] = pipe.ticker.perm_tick
-				chunk = (
-					chunk
-					.sort_values('timestamp')
-					.set_index(['timestamp', 'symbol'])
-				)
-				data.append(chunk)
+			with BacktestDB.session_scope() as sess:
+				data = []
+				for pipe in self.pipes:
+					chunk = pipe.get_data(sess, start, end)
+					# then here we adjust for enough bars to warmup
+					chunk['symbol'] = pipe.ticker_id
+					chunk = (
+						chunk
+						.sort_values('timestamp')
+						.set_index(['timestamp', 'symbol'])
+					)
+					data.append(chunk)
 		except KeyError:  # no data at all, so can't find the column
 			return  # so we simply stop warming up
 
