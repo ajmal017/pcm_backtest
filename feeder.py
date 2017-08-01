@@ -144,24 +144,24 @@ class DataBook:
 			stream = {}
 			for pipe in self.pipes:
 				data = pipe.get_data(sess=sess, start=self.start, end=self.end)
-				stream[pipe.ticker_id] = data.iterrows()
+				stream[pipe.ticker_id] = data.itertuples()
 			self.stream = stream
 
 
 	def get_new_market(self):
 		data = {}
 		for symbol in self.symbol_list:
-			ts, bar = next(self.stream[symbol])
+			bar = next(self.stream[symbol])
 
 			tick = Tick(
-				timestamp=ts,
-				open=float(bar['open']),
-				close=float(bar['close']),
-				high=float(bar['high']),
-				low=float(bar['low']),
-				volume=int(bar['volume']),
-				# trades=int(bar['trades']),
-				# wap=float(bar['wap']),
+				timestamp=bar.Index,
+				open=float(bar.open),
+				close=float(bar.close),
+				high=float(bar.high),
+				low=float(bar.low),
+				volume=int(bar.volume),
+				# trades=int(bar.trades),
+				# wap=float(bar.wap),
 			)
 
 			data[symbol] = tick
