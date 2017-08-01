@@ -6,6 +6,7 @@ from tqdm import tqdm
 from functools import lru_cache
 from threading import Thread
 from math import ceil
+from copy import copy
 
 from .pos import Position
 from .base import BaseConsumer
@@ -147,12 +148,19 @@ class BaseStrategy(BaseConsumer):
 		return sum(pos.mv for pos in self.pos.values()) + self.cash
 
 	@property
-	def bp(self):
+	def total_cost(self):
+		return sum(pos.cost for pos in self.pos.values())
+
+	@property
+	def total_bp(self):
 		if self.fixed_allocation:
 			return self.allocation
 		else:
 			return self.nav
 
+	@property
+	def avaliable_bp(self):
+		return self.total_bp - self.total_cost
 
 	def start(self):
 		while self.status != 'RUNNING':	
@@ -169,7 +177,9 @@ class BaseStrategy(BaseConsumer):
 		)
 
 		# publish event to get started
+		logger.info('Warming up Strategy')
 		self.basic_publish('warmup', sender=self.id)
+		logger.info('Really Starting up calculating Signals')
 		self.basic_publish('next', sender=self.id)
 
 
@@ -209,6 +219,7 @@ class BaseStrategy(BaseConsumer):
 		----------
 		fill (Fill Event)
 		"""
+		logger.info('Consuming filled Order')
 		fill = body['fill']
 
 		# update the position first
@@ -240,7 +251,7 @@ class BaseStrategy(BaseConsumer):
 		ticks (Market Event)
 		"""
 		if body['freq'] != self.freq: return
-		
+
 		ticks = body['ticks']
 		self._update_data(ticks)
 
@@ -248,12 +259,10 @@ class BaseStrategy(BaseConsumer):
 			self._calculate_signals()
 
 			# publish generated signals
-			bp = self.bp  # current snap_shot of buying power
+			equity = self.total_bp
+			bp = copy(self.avaliable_bp)  # current snap_shot of buying power
 			for S, pos in self.pos.items():
-				for order, lvl in pos.generate_orders(self.bp):
-					pos.confirm_order(order)
-					self.basic_publish('order', sender=self.id, order=order)
-
+				for order, lvl in pos.generate_orders(equity):
 					used_bp = self.on_order(order, lvl, bp)
 					bp -= used_bp
 				
@@ -286,13 +295,20 @@ class BaseStrategy(BaseConsumer):
 		S = order.symbol
 
 		need_bp = order.quantity * self.ticks[S].close
-		if need_bp <= bp:
+		if need_bp <= bp:  # have enough buying power to place order
 			used_bp = need_bp
 
 			if lvl == 'hard_stop':
 				self.on_hard_stop(S)
 			elif lvl == 'rebalance':
 				self.on_rebalance(S)
+
+			self.pos[order.symbol].confirm_order(order)
+			logger.info(
+				'Publish Order={} for Strategy={}'
+				.format(order, self.id)
+			)
+			self.basic_publish('order', sender=self.id, order=order)
 		else:
 			used_bp = 0
 		return used_bp
@@ -346,6 +362,10 @@ class BaseStrategy(BaseConsumer):
 			'cash': self.cash, 'commission': self.commission,
 			'nav': self.nav,
 		}
+		for k, v in self.pos.items():
+			output[str(k)+'_quantity'] = v.quantity
+			output[str(k)+'_mv'] = v.mv
+
 		self._hist.append(output)
 		
 		# if self.t % self.batch_size == 0:

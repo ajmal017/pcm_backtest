@@ -207,6 +207,10 @@ class DataBook:
 					# fire market event for the executor first
 					# filling the old orders first
 					market = self.get_new_market()
+					# logger.info(
+					# 	'Publish Tick at Freq={} for Strategy={}'
+					# 	.format(DEFAULT_FREQ, self.stgy_oid)
+					# )
 					self.app.basic_publish(
 						'tick', sender=self.stgy_oid,
 						ticks=market, freq=DEFAULT_FREQ
@@ -214,6 +218,7 @@ class DataBook:
 
 				except StopIteration:
 					# no more data, send out End-Of-Data Event
+					logger.info('Publish End-Of-Data')
 					self.app.basic_publish('eod', sender=self.stgy_oid)
 					return
 
@@ -239,6 +244,10 @@ class DataBook:
 					symbol: agg_bars(bars)
 					for symbol, bars in self.bars.items()
 				}
+			)
+			logger.info(
+				'Publish Tick at ts={} Freq={} for Strategy={}'
+				.format(market.timestamp, self.freq, self.stgy_oid)
 			)
 			self.app.basic_publish(
 				'tick', sender=self.stgy_oid,

@@ -121,6 +121,7 @@ class SimuBook:
 				'status': 'SUBMITTED'
 			}
 		
+		logger.info('Got Order={} from Strategy={}'.format(order.id, self.stgy_oid))
 		self.orders.append(order.id)
 
 
@@ -198,6 +199,10 @@ class SimuBook:
 			self.fillings[oid]['fills'].append(fill_event)
 
 			# publish fill events
+			logger.info(
+				'Publish Fill for Q={} Open={} for Order={}'
+				.format(fill_event.quantity, open_q, oid)
+			)
 			self.app.basic_publish('fill', sender=self.stgy_oid, fill=fill_event)
 
 
