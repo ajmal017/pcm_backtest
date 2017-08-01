@@ -50,14 +50,14 @@ class BaseConsumer(metaclass=ABCMeta):
 	
 	def setup(self):
 		# wait a bit for queue is setup before sending out messages
-		time.sleep(3)
+		time.sleep(1)
 		self.basic_status_publish('SETUP')
 		
 		for k in self.required:
 			self.basic_publish('reg-{}'.format(k), sender=self.id)
 
 		while not all(self.required.values()):
-			time.sleep(2)
+			time.sleep(1)
 
 		self.basic_status_publish('RUNNING')
 
@@ -83,20 +83,16 @@ class BaseConsumer(metaclass=ABCMeta):
 	def basic_publish(self, key, sender=None, **kws):
 		""" Publish messages through the default settings
 		"""
-		try:
-			body_ = {'group': self.group}
-			if kws:
-				body_.update(kws)
+		body_ = {'group': self.group}
+		if kws:
+			body_.update(kws)
 
-			if not sender:
-				sender_ = self.id
-			else:
-				sender_ = sender
+		if not sender:
+			sender_ = self.id
+		else:
+			sender_ = sender
 
-			print(key, sender_, body_)
-			return signal(key).send(sender_, body=body_)
-		except KeyError:
-			pass
+		return signal(key).send(sender_, body=body_)
 
 
 	def basic_status_publish(self, status=None, **kws):
