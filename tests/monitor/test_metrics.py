@@ -6,7 +6,7 @@ import pandas_datareader.data as web
 from unittest import TestCase
 from datetime import datetime
 
-from pcm.monitor.metrics import (
+from pcm_backtest.metrics import (
 	sharpe_ratio, var_cov_var, drawdown,
 	water_mark, max_drawdown_dur
 )

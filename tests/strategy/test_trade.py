@@ -2,10 +2,10 @@ import numpy as np
 
 from nose.tools import raises
 
-from pcm.strategy._trade import Trade
-from pcm.event import OrderEvent, Tick
-from pcm.conf import MKT, BUY, SELL, SMART, LONG, SHORT, EXIT
-from pcm.errors import OverFilling
+from pcm_backtest.trade import Trade
+from pcm_backtest.event import OrderEvent, Tick
+from pcm_backtest.conf import MKT, BUY, SELL, SMART, LONG, SHORT, EXIT
+from pcm_backtest.errors import OverFilling
 
 from datetime import datetime
 from bson import ObjectId

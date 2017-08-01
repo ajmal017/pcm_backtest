@@ -1,10 +1,9 @@
-from datetime import datetime
-
 import numpy as np, pandas as pd
 import pandas_datareader.data as web
 
+from datetime import datetime
 from scipy.stats import norm
-from pcm_backtest.conf import Constant
+from .conf import Constant
 
 
 def sharpe_ratio(returns, N=250):

@@ -4,7 +4,7 @@ from math import floor
 from pandas import Timestamp
 from bson import ObjectId
 
-from pcm.conf import SIGNAL, SIGNAL_DICT
+from pcm_backtest.conf import SIGNAL, SIGNAL_DICT
 from .core import Event
 
 

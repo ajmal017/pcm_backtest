@@ -3,7 +3,7 @@ import pandas as pd
 from pandas import Timestamp
 from bson import ObjectId
 
-from pcm.conf import ORDER, ORDER_DICT, FILL_DICT
+from pcm_backtest.conf import ORDER, ORDER_DICT, FILL_DICT
 from .core import Event
 
 

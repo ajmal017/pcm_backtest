@@ -1,7 +1,5 @@
 import pytz, pandas as pd, datetime
 
-from kombu import Connection, Exchange, pools
-
 
 # -----------------------------------------------------------------------------
 # Timezone Configurations

@@ -2,7 +2,7 @@ from pandas import Timestamp, DateOffset
 from collections import namedtuple, UserDict
 from datetime import time
 
-from pcm.conf import MARKET, GLOBAL_TZ, LOCAL_TZ, RTH_CLOSE
+from pcm_backtest.conf import MARKET, GLOBAL_TZ, LOCAL_TZ, RTH_CLOSE
 from .core import Event
 
 

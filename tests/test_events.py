@@ -6,11 +6,11 @@ from datetime import datetime
 from pandas import Timestamp
 from bson import ObjectId
 
-from pcm.event import (
+from pcm_backtest.event import (
 	Event, MarketEvent, Tick, SignalEventPct, OrderEvent,
 	FillEvent, FillEventIB
 )
-from pcm.conf import (
+from pcm_backtest.conf import (
 	FILL_TYPE, SIGNAL_TYPE, ORDER_TYPE,
 	BUY, SELL, LONG, SHORT, EXIT, MARKET, SIGNAL, ORDER, FILL,
 	MKT, LMT, SMART, LOCAL_TZ
@@ -38,8 +38,8 @@ class TestEvent:
 		self.evt.from_dict()
 
 
-	@patch('pcm.event.core.Event.as_dict')
-	@patch('pcm.event.core.json.dumps')
+	@patch('pcm_backtest.event.core.Event.as_dict')
+	@patch('pcm_backtest.event.core.json.dumps')
 	def test_as_json(self, mock_dump, mock_as_dict):
 		mock_as_dict.return_value = {}
 
@@ -47,8 +47,8 @@ class TestEvent:
 		mock_dump.assert_called_once_with({})
 
 
-	@patch('pcm.event.core.Event.from_dict')
-	@patch('pcm.event.core.json.loads')
+	@patch('pcm_backtest.event.core.Event.from_dict')
+	@patch('pcm_backtest.event.core.json.loads')
 	def test_from_json(self, mock_loads, mock_from_dict):
 		self.evt.from_json("{'a': 100}")
 		mock_loads.assert_called_once()
@@ -69,6 +69,7 @@ class TestMarketEvent:
 
 
 	def test_type(self):
+		print(self.evt.type)
 		assert self.evt.type is MARKET
 
 
@@ -200,7 +201,7 @@ class TestFillEvent:
 		)
 
 
-	@patch('pcm.event.FillEvent.calculate_commission')
+	@patch('pcm_backtest.event.FillEvent.calculate_commission')
 	@patch.multiple(FillEvent, __abstractmethods__=set())
 	def test_init(self, mock_comm):
 		evt = FillEvent(

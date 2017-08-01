@@ -2,13 +2,11 @@ import inspect, lz4, pickle, pandas as pd
 
 from binascii import a2b_uu, b2a_uu
 from bson import ObjectId
-from contextlib import contextmanager
-from kombu import Queue
 from concurrent.futures import ThreadPoolExecutor
 from ibapi.contract import Contract as IBcontract
 
-from pcm.event import EVENT_MAP
-from pcm.conf import AMQP, LOCAL_TZ, GLOBAL_TZ
+from .event import EVENT_MAP
+from .conf import LOCAL_TZ, GLOBAL_TZ
 
 
 thread_pool = ThreadPoolExecutor(50)
@@ -39,70 +37,6 @@ def compress_data(data):
 	return lz4.compressHC(pickle.dumps(data))
 
 
-@contextmanager
-def amqp_conn_scope(block=True):
-	"""Context manager of Rabbitmq Connection
-	- connection is acquired from the poll
-
-	Parameter
-	---------
-	block: bool, whether wait for the producer be avaliable
-	"""
-	try:
-		with AMQP.ConnPool[AMQP.ConnParam].acquire(block=block) as conn:
-			yield conn
-	except (KeyboardInterrupt, SystemExit) as exc:
-		pass
-	except Exception as exc:
-		raise exc
-
-
-@contextmanager
-def amqp_prod_scope(block=True):
-	"""Context manager of Producer connection
-	- producer will be created out of avaliable connection
-	- connection is acquired from the pool
-
-	Parameter
-	---------
-	block: bool, whether wait for the producer be avaliable
-	"""
-	# with amqp_conn_scope(block=block) as conn:
-	try:
-		with AMQP.ProdPool[AMQP.ConnParam].acquire(block=block) as prod:
-			yield prod
-	except (KeyboardInterrupt, SystemExit) as exc:
-		pass
-	except Exception as exc:
-		raise exc
-
-
-def get_temp_queue(consumer, **kws):
-	"""Convient function to create temporary queue
-
-	Parameter
-	---------
-	consumer: BaseConsumer Subclass
-		to make random name distinguishble as a group
-		random name is based on
-		- Consumer's group name
-		- Consumer's its own name
-		- Random ObjectId()
-	kws: any keyword arguments that pass to komby.Queue for construction
-
-	Note:
-	-----
-	This naming convention ensures that each component would have
-	multiple queues
-	"""
-	name_ = '{}.{}.{}'.format(
-		consumer.group,
-		consumer.name,
-		str(ObjectId())
-	)
-	return Queue(name_, **kws)
-	
-
 def key_groups(routing_key):
 	"""Central function for helping decompose routing key
 
@@ -111,23 +45,6 @@ def key_groups(routing_key):
 	group name, class name, message type
 	"""
 	return routing_key.split('.')
-
-
-def event_from_dict(body):
-	"""Convient helper function to reconstruct Event from dictionary
-
-	Parameter
-	---------
-	body: dict, {'event_type':..., 'data': ...}
-		- event_type: for what kind of event
-			avaliable: {'market', 'order', 'fill_ib', 'signal'}
-		- data: addiation data go with the event
-
-	Return
-	------
-	Any Inherited instance out of Event
-	"""
-	return EVENT_MAP[body['event_type']].from_dict(**body['data'])
 
 
 def oid_to_ascii(oid):

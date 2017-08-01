@@ -4,7 +4,7 @@ from pandas import Timestamp
 from abc import abstractmethod
 from bson import ObjectId
 
-from pcm.conf import EXCHANGE_DICT, FILL, FILL_DICT
+from pcm_backtest.conf import EXCHANGE_DICT, FILL, FILL_DICT
 from .core import Event
 
 

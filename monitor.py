@@ -5,8 +5,7 @@ from matplotlib.ticker import FuncFormatter
 from collections import OrderedDict
 from cytoolz import pluck
 
-from pcm.util import dollar_trunc
-from pcm.orm.hist import Contract
+from .util import dollar_trunc
 from .metrics import (
 	drawdown, max_drawdown_dur, max_drawdown, drawdown_dur, sharpe_ratio,
 	roy_safety_ratio, alpha_beta, var_cov_var, sortino_ratio, omega_ratio,

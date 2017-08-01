@@ -2,11 +2,10 @@ import numpy as np
 
 from collections import defaultdict
 
-from pcm.strategy._trade import Trade
-from pcm.errors import NoOpenTrade
-from pcm.conf import LONG, SHORT, EXIT, BUY, SELL, MKT
-from pcm.event import SignalEventPct, OrderEvent
-from pcm.errors import OverFilling
+from .trade import Trade
+from .errors import NoOpenTrade, OverFilling
+from .conf import LONG, SHORT, EXIT, BUY, SELL, MKT
+from .event import SignalEventPct, OrderEvent
 
 
 class Position:
@@ -56,7 +55,7 @@ class Position:
 		try:
 			return self.trades[self._open_trade]
 		except KeyError:
-			raise NoOpenTrade('There is any open trade yet')
+			raise NoOpenTrade('There is no any open trade yet')
 
 	@property
 	def position(self):

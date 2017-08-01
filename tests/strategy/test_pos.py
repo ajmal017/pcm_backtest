@@ -5,11 +5,11 @@ from bson import ObjectId
 from datetime import datetime
 from mock import patch, PropertyMock
 
-from pcm.strategy._pos import Position
-from pcm.strategy._trade import Trade
-from pcm.event import OrderEvent, Tick, SignalEventPct, FillEventIB
-from pcm.errors import NoOpenTrade
-from pcm.conf import MKT, BUY, SELL, EXIT, LONG, SHORT, SMART
+from pcm_backtest.pos import Position
+from pcm_backtest.trade import Trade
+from pcm_backtest.event import OrderEvent, Tick, SignalEventPct, FillEventIB
+from pcm_backtest.errors import NoOpenTrade
+from pcm_backtest.conf import MKT, BUY, SELL, EXIT, LONG, SHORT, SMART
 
 
 
@@ -107,9 +107,9 @@ class TestPosition:
 			assert lvl == 'normal'
 
 
-	@patch('pcm.strategy._pos.Position.check_rebalance')
-	@patch('pcm.strategy._pos.Position.check_hard_stop')
-	@patch('pcm.strategy._pos.Position.has_position', new_callable=PropertyMock)
+	@patch('pcm_backtest.pos.Position.check_rebalance')
+	@patch('pcm_backtest.pos.Position.check_hard_stop')
+	@patch('pcm_backtest.pos.Position.has_position', new_callable=PropertyMock)
 	def test_calculate_signal(self, mock_has_position, mock_hs, mock_reb):
 		mock_has_position.return_value = False
 		self.pos._calculate_signals()
@@ -122,8 +122,8 @@ class TestPosition:
 		mock_reb.assert_called_once()
 
 
-	@patch('pcm.strategy._pos.Position._generate_signal')
-	@patch('pcm.strategy._pos.Position.drawdown', new_callable=PropertyMock)
+	@patch('pcm_backtest.pos.Position._generate_signal')
+	@patch('pcm_backtest.pos.Position.drawdown', new_callable=PropertyMock)
 	def test_calculate_signal(self, mock_drawdown, mock_gen_signal):
 		self.pos.hard_stop = 0
 		self.pos.check_hard_stop()
@@ -139,8 +139,8 @@ class TestPosition:
 		mock_gen_signal.assert_called_once()
 
 
-	@patch('pcm.strategy._pos.Position._generate_signal')
-	@patch('pcm.strategy._pos.Position.t', new_callable=PropertyMock)
+	@patch('pcm_backtest.pos.Position._generate_signal')
+	@patch('pcm_backtest.pos.Position.t', new_callable=PropertyMock)
 	def test_calculate_signal(self, mock_t, mock_gen_signal):
 		self.pos.rebalance = 0
 		self.pos.check_rebalance()
