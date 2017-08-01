@@ -199,8 +199,6 @@ class BaseStrategy(BaseConsumer):
 	def on_eod(self, oid, body):
 		"""Handlering End of Data Event"""
 		self._pbar.update(self._pbar.total - self._pbar.n)
-		# if self._hist:
-			# self._process_position_entries()
 		self._pbar.close()
 
 		self.basic_publish('dereg-feed', sender=self.id)
@@ -368,11 +366,3 @@ class BaseStrategy(BaseConsumer):
 
 		self._hist.append(output)
 		
-		# if self.t % self.batch_size == 0:
-			# self._process_position_entries()
-
-
-	# def _process_position_entries(self):
-	# 	data = compress_data(self._hist)
-	# 	process_new_position.delay(self.name, positions=data)
-	# 	self._hist.clear()

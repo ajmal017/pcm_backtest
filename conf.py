@@ -150,35 +150,3 @@ class SECMaster:
 	db = 'sec_master'
 	url = url_pattern.format(host=host, port=port)
 	default_tz = GLOBAL_TZ
-
-
-# -----------------------------------------------------------------------------
-# Pipeline Seeting
-# -----------------------------------------------------------------------------
-# Job markers at different stage
-class INIT:
-	def __repr__(self):
-		return 'INIT'
-
-class FINISHED:
-	def __repr__(self):
-		return 'FINISHED'
-
-class STARTED:
-	def __repr__(self):
-		return 'STARTED'
-
-class FAILED:
-	def __repr__(self):
-		return 'FAILED'
-
-class TIME_OUT:
-	def __repr__(self):
-		return 'TIME_OUT'
-
-
-START = object()
-END = object()
-STOP = object()
-NEXT = object()
-DONE = object()
