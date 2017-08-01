@@ -50,12 +50,12 @@ class MarketEvent(Event, UserDict):
 	
 	@property
 	def local_ts(self):
-		return (
-			self.timestamp
-			.tz_localize(GLOBAL_TZ)
-			.tz_convert(LOCAL_TZ)
-			+ DateOffset(seconds=1)
-		)
+		try:
+			ts = self.timestamp.tz_localize(GLOBAL_TZ).tz_convert(LOCAL_TZ)
+		except:  # already have tz
+			ts = self.timestamp.tz_convert(LOCAL_TZ)
+
+		return ts + DateOffset(seconds=1)
 
 
 	@property
