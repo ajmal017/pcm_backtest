@@ -4,7 +4,7 @@ import numpy as np, pandas as pd
 import pandas_datareader.data as web
 
 from scipy.stats import norm
-from pcm.conf import Constant
+from pcm_backtest.conf import Constant
 
 
 def sharpe_ratio(returns, N=250):
